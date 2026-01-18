@@ -3,7 +3,7 @@ package storage
 import (
 	"database/sql"
 	"fmt"
-	"log"
+	"github.com/rs/zerolog/log"
 	"time"
 )
 
@@ -32,7 +32,7 @@ func migrate(db *sql.DB) error {
 		return nil
 	}
 
-	log.Printf("db version is %d. migrating to %d", version, maxVersion)
+	log.Info().Msgf("db version is %d. migrating to %d", version, maxVersion)
 
 	for v := version + 1; v <= maxVersion; v++ {
 		// Migrations altering schema using a sequence of steps due to SQLite limitations.
@@ -41,7 +41,7 @@ func migrate(db *sql.DB) error {
 		// https://www.sqlite.org/lang_altertable.html
 		trickyAlteration := (v == 3)
 
-		log.Printf("[migration:%d] starting", v)
+		log.Info().Msgf("[migration:%d] starting", v)
 
 		if trickyAlteration {
 			db.Exec("pragma foreign_keys=off;")
@@ -57,7 +57,7 @@ func migrate(db *sql.DB) error {
 			return err
 		}
 
-		log.Printf("[migration:%d] done", v)
+		log.Info().Msgf("[migration:%d] done", v)
 	}
 	return nil
 }
@@ -67,21 +67,21 @@ func migrateVersion(v int64, db *sql.DB) error {
 	var tx *sql.Tx
 	migratefunc := migrations[v-1]
 	if tx, err = db.Begin(); err != nil {
-		log.Printf("[migration:%d] failed to start transaction", v)
+		log.Error().Err(err).Msgf("[migration:%d] failed to start transaction", v)
 		return err
 	}
 	if err = migratefunc(tx); err != nil {
-		log.Printf("[migration:%d] failed to migrate", v)
+		log.Error().Err(err).Msgf("[migration:%d] failed to migrate", v)
 		tx.Rollback()
 		return err
 	}
 	if _, err = tx.Exec(fmt.Sprintf("pragma user_version = %d", v)); err != nil {
-		log.Printf("[migration:%d] failed to bump version", v)
+		log.Error().Err(err).Msgf("[migration:%d] failed to bump version", v)
 		tx.Rollback()
 		return err
 	}
 	if err = tx.Commit(); err != nil {
-		log.Printf("[migration:%d] failed to commit changes", v)
+		log.Error().Err(err).Msgf("[migration:%d] failed to commit changes", v)
 		return err
 	}
 	return nil

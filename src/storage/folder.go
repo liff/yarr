@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"log"
+	"github.com/rs/zerolog/log"
 )
 
 type Folder struct {
@@ -24,7 +24,7 @@ func (s *Storage) CreateFolder(title string) *Folder {
 	err := row.Scan(&id)
 
 	if err != nil {
-		log.Print(err)
+		log.Error().Err(err).Send()
 		return nil
 	}
 	return &Folder{Id: id, Title: title, IsExpanded: expanded}
@@ -33,7 +33,7 @@ func (s *Storage) CreateFolder(title string) *Folder {
 func (s *Storage) DeleteFolder(folderId int64) bool {
 	_, err := s.db.Exec(`delete from folders where id = ?`, folderId)
 	if err != nil {
-		log.Print(err)
+		log.Error().Err(err).Send()
 	}
 	return err == nil
 }
@@ -56,14 +56,14 @@ func (s *Storage) ListFolders() []Folder {
 		order by title collate nocase
 	`)
 	if err != nil {
-		log.Print(err)
+		log.Error().Err(err).Send()
 		return result
 	}
 	for rows.Next() {
 		var f Folder
 		err = rows.Scan(&f.Id, &f.Title, &f.IsExpanded)
 		if err != nil {
-			log.Print(err)
+			log.Error().Err(err).Send()
 			return result
 		}
 		result = append(result, f)

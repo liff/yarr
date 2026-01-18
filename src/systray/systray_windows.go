@@ -6,8 +6,8 @@ package systray
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"github.com/rs/zerolog/log"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -764,12 +764,12 @@ func (t *winTray) iconToBitmap(hIcon windows.Handle) (windows.Handle, error) {
 
 func registerSystray() {
 	if err := wt.initInstance(); err != nil {
-		log.Printf("Unable to init instance: %v", err)
+		log.Error().Err(err).Msgf("Unable to init instance")
 		return
 	}
 
 	if err := wt.createMenu(); err != nil {
-		log.Printf("Unable to create menu: %v", err)
+		log.Error().Err(err).Msgf("Unable to create menu")
 		return
 	}
 
@@ -794,7 +794,7 @@ func nativeLoop() {
 		// https://msdn.microsoft.com/en-us/library/windows/desktop/ms644936(v=vs.85).aspx
 		switch int32(ret) {
 		case -1:
-			log.Printf("Error at message loop: %v", err)
+			log.Error().Err(err).Msgf("Error at message loop")
 			return
 		case 0:
 			return
@@ -835,11 +835,11 @@ func iconBytesToFilePath(iconBytes []byte) (string, error) {
 func SetIcon(iconBytes []byte) {
 	iconFilePath, err := iconBytesToFilePath(iconBytes)
 	if err != nil {
-		log.Printf("Unable to write icon data to temp file: %v", err)
+		log.Error().Err(err).Msgf("Unable to write icon data to temp file")
 		return
 	}
 	if err := wt.setIcon(iconFilePath); err != nil {
-		log.Printf("Unable to set icon: %v", err)
+		log.Error().Err(err).Msgf("Unable to set icon")
 		return
 	}
 }
@@ -869,19 +869,19 @@ func (item *MenuItem) parentId() uint32 {
 func (item *MenuItem) SetIcon(iconBytes []byte) {
 	iconFilePath, err := iconBytesToFilePath(iconBytes)
 	if err != nil {
-		log.Printf("Unable to write icon data to temp file: %v", err)
+		log.Error().Err(err).Msgf("Unable to write icon data to temp file")
 		return
 	}
 
 	h, err := wt.loadIconFrom(iconFilePath)
 	if err != nil {
-		log.Printf("Unable to load icon from temp file: %v", err)
+		log.Error().Err(err).Msgf("Unable to load icon from temp file")
 		return
 	}
 
 	h, err = wt.iconToBitmap(h)
 	if err != nil {
-		log.Printf("Unable to convert icon to bitmap: %v", err)
+		log.Error().Err(err).Msgf("Unable to convert icon to bitmap")
 		return
 	}
 	wt.muMenuItemIcons.Lock()
@@ -890,7 +890,7 @@ func (item *MenuItem) SetIcon(iconBytes []byte) {
 
 	err = wt.addOrUpdateMenuItem(uint32(item.id), item.parentId(), item.title, item.disabled, item.checked)
 	if err != nil {
-		log.Printf("Unable to addOrUpdateMenuItem: %v", err)
+		log.Error().Err(err).Msgf("Unable to addOrUpdateMenuItem")
 		return
 	}
 }
@@ -899,7 +899,7 @@ func (item *MenuItem) SetIcon(iconBytes []byte) {
 // only available on Mac and Windows.
 func SetTooltip(tooltip string) {
 	if err := wt.setTooltip(tooltip); err != nil {
-		log.Printf("Unable to set tooltip: %v", err)
+		log.Error().Err(err).Msgf("Unable to set tooltip")
 		return
 	}
 }
@@ -907,7 +907,7 @@ func SetTooltip(tooltip string) {
 func addOrUpdateMenuItem(item *MenuItem) {
 	err := wt.addOrUpdateMenuItem(uint32(item.id), item.parentId(), item.title, item.disabled, item.checked)
 	if err != nil {
-		log.Printf("Unable to addOrUpdateMenuItem: %v", err)
+		log.Error().Err(err).Msgf("Unable to addOrUpdateMenuItem")
 		return
 	}
 }
@@ -923,7 +923,7 @@ func (item *MenuItem) SetTemplateIcon(templateIconBytes []byte, regularIconBytes
 func addSeparator(id uint32) {
 	err := wt.addSeparatorMenuItem(id, 0)
 	if err != nil {
-		log.Printf("Unable to addSeparator: %v", err)
+		log.Error().Err(err).Msgf("Unable to addSeparator")
 		return
 	}
 }
@@ -931,7 +931,7 @@ func addSeparator(id uint32) {
 func hideMenuItem(item *MenuItem) {
 	err := wt.hideMenuItem(uint32(item.id), item.parentId())
 	if err != nil {
-		log.Printf("Unable to hideMenuItem: %v", err)
+		log.Error().Err(err).Msgf("Unable to hideMenuItem")
 		return
 	}
 }

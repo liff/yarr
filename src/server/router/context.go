@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"log"
+	"github.com/rs/zerolog/log"
 	"net/http"
 	"strconv"
 )
@@ -27,7 +27,7 @@ func (c *Context) Next() {
 func (c *Context) JSON(status int, data interface{}) {
 	body, err := json.Marshal(data)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Send()
 	}
 	c.Out.Header().Set("Content-Type", "application/json; charset=utf-8")
 	c.Out.WriteHeader(status)

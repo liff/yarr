@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/nkanaev/yarr/src/parser"
 )
@@ -23,23 +24,23 @@ func main() {
 	if strings.HasPrefix(url, "http") {
 		res, err := http.Get(url)
 		if err != nil {
-			log.Fatalf("failed to get url %s: %s", url, err)
+			log.Fatal().Err(err).Msgf("failed to get url %s", url)
 		}
 		r = res.Body
 	} else {
 		var err error
 		r, err = os.Open(url)
 		if err != nil {
-			log.Fatalf("failed to open file: %s", err)
+			log.Fatal().Err(err).Msg("failed to open file")
 		}
 	}
 	feed, err := parser.Parse(r)
 	if err != nil {
-		log.Fatalf("failed to parse feed: %s", err)
+		log.Fatal().Err(err).Msg("failed to parse feed: %s")
 	}
 	body, err := json.MarshalIndent(feed, "", "  ")
 	if err != nil {
-		log.Fatalf("failed to marshall feed: %s", err)
+		log.Fatal().Err(err).Msg("failed to marshall feed")
 	}
 	fmt.Println(string(body))
 }

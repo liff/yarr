@@ -6,8 +6,9 @@ import (
 	"io"
 	"io/fs"
 	"io/ioutil"
-	"log"
 	"os"
+
+	"github.com/rs/zerolog/log"
 )
 
 type assetsfs struct {
@@ -33,14 +34,14 @@ func Template(path string) *template.Template {
 				svgfile, err := FS.Open("graphicarts/" + svg)
 				// should never happen
 				if err != nil {
-					log.Fatal(err)
+					log.Fatal().Err(err).Send()
 				}
 				defer svgfile.Close()
 
 				content, err := ioutil.ReadAll(svgfile)
 				// should never happen
 				if err != nil {
-					log.Fatal(err)
+					log.Fatal().Err(err).Send()
 				}
 				return template.HTML(content)
 			},

@@ -3,10 +3,8 @@ package server
 import (
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"reflect"
 	"testing"
 
@@ -53,9 +51,7 @@ func TestStaticBanTemplates(t *testing.T) {
 }
 
 func TestIndexGzipped(t *testing.T) {
-	log.SetOutput(io.Discard)
 	db, _ := storage.New(":memory:")
-	log.SetOutput(os.Stderr)
 	handler := NewServer(db, "127.0.0.1:8000").handler()
 	url := "/"
 
@@ -76,12 +72,10 @@ func TestIndexGzipped(t *testing.T) {
 }
 
 func TestFeedIcons(t *testing.T) {
-	log.SetOutput(io.Discard)
 	db, _ := storage.New(":memory:")
 	icon := []byte("test")
 	feed := db.CreateFeed("", "", "", "", nil)
 	db.UpdateFeedIcon(feed.Id, &icon)
-	log.SetOutput(os.Stderr)
 
 	recorder := httptest.NewRecorder()
 	url := fmt.Sprintf("/api/feeds/%d/icon", feed.Id)

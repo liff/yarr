@@ -4,7 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/base64"
 	"fmt"
-	"log"
+	"github.com/rs/zerolog/log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -339,7 +339,7 @@ func (s *Server) feverSavedItemIDsHandler(c *router.Context) {
 func (s *Server) feverMarkHandler(c *router.Context) {
 	id, err := strconv.ParseInt(c.Req.Form.Get("id"), 10, 64)
 	if err != nil {
-		log.Print("invalid id:", err)
+		log.Error().Err(err).Msg("invalid id")
 		return
 	}
 

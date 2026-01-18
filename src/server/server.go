@@ -1,7 +1,7 @@
 package server
 
 import (
-	"log"
+	"github.com/rs/zerolog/log"
 	"net"
 	"net/http"
 	"os"
@@ -62,7 +62,7 @@ func (s *Server) Start() {
 	if path, isUnix := strings.CutPrefix(s.Addr, "unix:"); isUnix {
 		err = os.Remove(path)
 		if err != nil {
-			log.Print(err)
+			log.Warn().Err(err).Msg("failed to remove existing unix socket")
 		}
 		ln, err = net.Listen("unix", path)
 	} else {
@@ -70,7 +70,7 @@ func (s *Server) Start() {
 	}
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("failed to bind listening socket")
 	}
 
 	httpserver := &http.Server{Handler: s.handler()}
@@ -82,6 +82,6 @@ func (s *Server) Start() {
 	}
 
 	if err != http.ErrServerClosed {
-		log.Fatal(err)
+		log.Fatal().Err(err).Send()
 	}
 }

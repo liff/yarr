@@ -4,12 +4,13 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/nkanaev/yarr/src/assets"
 	"github.com/nkanaev/yarr/src/content/htmlutil"
@@ -112,7 +113,7 @@ func (s *Server) handleFolderList(c *router.Context) {
 	} else if c.Req.Method == "POST" {
 		var body FolderCreateForm
 		if err := json.NewDecoder(c.Req.Body).Decode(&body); err != nil {
-			log.Print(err)
+			log.Error().Err(err).Send()
 			c.Out.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -136,7 +137,7 @@ func (s *Server) handleFolder(c *router.Context) {
 	if c.Req.Method == "PUT" {
 		var body FolderUpdateForm
 		if err := json.NewDecoder(c.Req.Body).Decode(&body); err != nil {
-			log.Print(err)
+			log.Error().Err(err).Send()
 			c.Out.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -225,7 +226,7 @@ func (s *Server) handleFeedList(c *router.Context) {
 	} else if c.Req.Method == "POST" {
 		var form FeedCreateForm
 		if err := json.NewDecoder(c.Req.Body).Decode(&form); err != nil {
-			log.Print(err)
+			log.Error().Err(err).Send()
 			c.Out.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -233,7 +234,7 @@ func (s *Server) handleFeedList(c *router.Context) {
 		result, err := worker.DiscoverFeed(form.Url)
 		switch {
 		case err != nil:
-			log.Printf("Faild to discover feed for %s: %s", form.Url, err)
+			log.Error().Err(err).Msgf("Failed to discover feed for %s", form.Url)
 			c.JSON(http.StatusOK, map[string]string{"status": "notfound"})
 		case len(result.Sources) > 0:
 			c.JSON(http.StatusOK, map[string]interface{}{"status": "multiple", "choice": result.Sources})
@@ -277,7 +278,7 @@ func (s *Server) handleFeed(c *router.Context) {
 		}
 		body := make(map[string]interface{})
 		if err := json.NewDecoder(c.Req.Body).Decode(&body); err != nil {
-			log.Print(err)
+			log.Error().Err(err).Send()
 			c.Out.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -337,7 +338,7 @@ func (s *Server) handleItem(c *router.Context) {
 	} else if c.Req.Method == "PUT" {
 		var body ItemUpdateForm
 		if err := json.NewDecoder(c.Req.Body).Decode(&body); err != nil {
-			log.Print(err)
+			log.Error().Err(err).Send()
 			c.Out.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -431,12 +432,12 @@ func (s *Server) handleOPMLImport(c *router.Context) {
 	if c.Req.Method == "POST" {
 		file, _, err := c.Req.FormFile("opml")
 		if err != nil {
-			log.Print(err)
+			log.Error().Err(err).Send()
 			return
 		}
 		doc, err := opml.Parse(file)
 		if err != nil {
-			log.Print(err)
+			log.Error().Err(err).Send()
 			c.Out.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -514,13 +515,13 @@ func (s *Server) handlePageCrawl(c *router.Context) {
 		return
 	}
 	if isInternalFromURL(url) {
-		log.Printf("attempt to access internal IP %s from %s", url, c.Req.RemoteAddr)
+		log.Info().Msgf("attempt to access internal IP %s from %s", url, c.Req.RemoteAddr)
 		return
 	}
 
 	body, err := worker.GetBody(url)
 	if err != nil {
-		log.Print(err)
+		log.Error().Err(err).Send()
 		c.Out.WriteHeader(http.StatusBadRequest)
 		return
 	}

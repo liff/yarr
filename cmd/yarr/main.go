@@ -5,10 +5,13 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/journald"
+	"github.com/rs/zerolog/log"
 
 	"github.com/nkanaev/yarr/src/platform"
 	"github.com/nkanaev/yarr/src/server"
@@ -49,7 +52,7 @@ func main() {
 	platform.FixConsoleIfNeeded()
 
 	var addr, db, authfile, auth, certfile, keyfile, basepath, logfile string
-	var ver, open bool
+	var ver, open, journal bool
 
 	flag.CommandLine.SetOutput(os.Stdout)
 
@@ -71,6 +74,7 @@ func main() {
 	flag.StringVar(&logfile, "log-file", opt("YARR_LOGFILE", ""), "`path` to log file to use instead of stdout")
 	flag.BoolVar(&ver, "version", false, "print application version")
 	flag.BoolVar(&open, "open", false, "open the server in browser")
+	flag.BoolVar(&journal, "journal", false, "log to systemd journal")
 	flag.Parse()
 
 	if ver {
@@ -78,63 +82,64 @@ func main() {
 		return
 	}
 
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-	if logfile != "" {
+	if journal {
+		log.Logger = zerolog.New(journald.NewJournalDWriter())
+	} else if logfile != "" {
 		file, err := os.OpenFile(logfile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 		if err != nil {
-			log.Fatal("Failed to setup log file: ", err)
+			log.Fatal().Err(err).Msg("Failed to setup log file: ")
 		}
 		defer file.Close()
-		log.SetOutput(file)
+		log.Logger = zerolog.New(file).With().Timestamp().Logger()
 	} else {
-		log.SetOutput(os.Stdout)
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
 
 	if open && strings.HasPrefix(addr, "unix:") {
-		log.Fatal("Cannot open ", addr, " in browser")
+		log.Fatal().Msgf("Cannot open %s in browser", addr)
 	}
 
 	if db == "" {
 		configPath, err := os.UserConfigDir()
 		if err != nil {
-			log.Fatal("Failed to get config dir: ", err)
+			log.Fatal().Err(err).Msg("Failed to get config dir")
 		}
 
 		storagePath := filepath.Join(configPath, "yarr")
 		if err := os.MkdirAll(storagePath, 0755); err != nil {
-			log.Fatal("Failed to create app config dir: ", err)
+			log.Fatal().Err(err).Msg("Failed to create app config dir")
 		}
 		db = filepath.Join(storagePath, "storage.db")
 	}
 
-	log.Printf("using db file %s", db)
+	log.Info().Msgf("using db file %s", db)
 
 	var username, password string
 	var err error
 	if authfile != "" {
 		f, err := os.Open(authfile)
 		if err != nil {
-			log.Fatal("Failed to open auth file: ", err)
+			log.Fatal().Err(err).Msg("Failed to open auth file")
 		}
 		defer f.Close()
 		username, password, err = parseAuthfile(f)
 		if err != nil {
-			log.Fatal("Failed to parse auth file: ", err)
+			log.Fatal().Err(err).Msg("Failed to parse auth file")
 		}
 	} else if auth != "" {
 		username, password, err = parseAuthfile(strings.NewReader(auth))
 		if err != nil {
-			log.Fatal("Failed to parse auth literal: ", err)
+			log.Fatal().Err(err).Msg("Failed to parse auth literal")
 		}
 	}
 
 	if (certfile != "" || keyfile != "") && (certfile == "" || keyfile == "") {
-		log.Fatalf("Both cert & key files are required")
+		log.Fatal().Msg("Both cert & key files are required")
 	}
 
 	store, err := storage.New(db)
 	if err != nil {
-		log.Fatal("Failed to initialise database: ", err)
+		log.Fatal().Err(err).Msg("Failed to initialise database")
 	}
 
 	worker.SetVersion(Version)
@@ -154,7 +159,7 @@ func main() {
 		srv.Password = password
 	}
 
-	log.Printf("starting server at %s", srv.GetAddr())
+	log.Info().Msgf("starting server at %s", srv.GetAddr())
 	if open {
 		platform.Open(srv.GetAddr())
 	}

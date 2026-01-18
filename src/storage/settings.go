@@ -2,7 +2,7 @@ package storage
 
 import (
 	"encoding/json"
-	"log"
+	"github.com/rs/zerolog/log"
 )
 
 func settingsDefaults() map[string]interface{} {
@@ -31,7 +31,7 @@ func (s *Storage) GetSettingsValue(key string) interface{} {
 	}
 	var valDecoded interface{}
 	if err := json.Unmarshal([]byte(val), &valDecoded); err != nil {
-		log.Print(err)
+		log.Error().Err(err).Send()
 		return nil
 	}
 	return valDecoded
@@ -51,7 +51,7 @@ func (s *Storage) GetSettings() map[string]interface{} {
 	result := settingsDefaults()
 	rows, err := s.db.Query(`select key, val from settings;`)
 	if err != nil {
-		log.Print(err)
+		log.Error().Err(err).Send()
 		return result
 	}
 	for rows.Next() {
@@ -61,7 +61,7 @@ func (s *Storage) GetSettings() map[string]interface{} {
 
 		rows.Scan(&key, &val)
 		if err = json.Unmarshal([]byte(val), &valDecoded); err != nil {
-			log.Print(err)
+			log.Error().Err(err).Send()
 			continue
 		}
 		result[key] = valDecoded
@@ -77,7 +77,7 @@ func (s *Storage) UpdateSettings(kv map[string]interface{}) bool {
 		}
 		valEncoded, err := json.Marshal(val)
 		if err != nil {
-			log.Print(err)
+			log.Error().Err(err).Send()
 			return false
 		}
 		_, err = s.db.Exec(`
@@ -86,7 +86,7 @@ func (s *Storage) UpdateSettings(kv map[string]interface{}) bool {
 			key, valEncoded, valEncoded,
 		)
 		if err != nil {
-			log.Print(err)
+			log.Error().Err(err).Send()
 			return false
 		}
 	}

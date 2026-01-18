@@ -1,10 +1,11 @@
 package worker
 
 import (
-	"log"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/nkanaev/yarr/src/storage"
 )
@@ -50,7 +51,7 @@ func (w *Worker) FindFavicons() {
 func (w *Worker) FindFeedFavicon(feed storage.Feed) {
 	icon, err := findFavicon(feed.Link, feed.FeedLink)
 	if err != nil {
-		log.Printf("Failed to find favicon for %s (%s): %s", feed.FeedLink, feed.Link, err)
+		log.Error().Err(err).Msgf("Failed to find favicon for %s (%s)", feed.FeedLink, feed.Link)
 	}
 	if icon != nil {
 		w.db.UpdateFeedIcon(feed.Id, icon)
@@ -73,14 +74,14 @@ func (w *Worker) SetRefreshRate(minute int64) {
 	w.refresh = time.NewTicker(time.Minute * time.Duration(minute))
 
 	go func(fire <-chan time.Time, stop <-chan bool, m int64) {
-		log.Printf("auto-refresh %dm: starting", m)
+		log.Info().Msgf("auto-refresh %dm: starting", m)
 		for {
 			select {
 			case <-fire:
-				log.Printf("auto-refresh %dm: firing", m)
+				log.Info().Msgf("auto-refresh %dm: firing", m)
 				w.RefreshFeeds()
 			case <-stop:
-				log.Printf("auto-refresh %dm: stopping", m)
+				log.Info().Msgf("auto-refresh %dm: stopping", m)
 				return
 			}
 		}
@@ -92,17 +93,17 @@ func (w *Worker) RefreshFeeds() {
 	defer w.reflock.Unlock()
 
 	if *w.pending > 0 {
-		log.Print("Refreshing already in progress")
+		log.Info().Msg("Refreshing already in progress")
 		return
 	}
 
 	feeds := w.db.ListFeeds()
 	if len(feeds) == 0 {
-		log.Print("Nothing to refresh")
+		log.Info().Msg("Nothing to refresh")
 		return
 	}
 
-	log.Print("Refreshing feeds")
+	log.Info().Msg("Refreshing feeds")
 	atomic.StoreInt32(w.pending, int32(len(feeds)))
 	go w.refresher(feeds)
 }
@@ -132,7 +133,7 @@ func (w *Worker) refresher(feeds []storage.Feed) {
 	close(srcqueue)
 	close(dstqueue)
 
-	log.Printf("Finished refreshing %d feeds", len(feeds))
+	log.Info().Msgf("Finished refreshing %d feeds", len(feeds))
 }
 
 func (w *Worker) worker(srcqueue <-chan storage.Feed, dstqueue chan<- []storage.Item) {

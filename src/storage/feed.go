@@ -2,7 +2,8 @@ package storage
 
 import (
 	"database/sql"
-	"log"
+
+	"github.com/rs/zerolog/log"
 )
 
 type Feed struct {
@@ -21,7 +22,7 @@ func (s *Storage) CreateFeed(title, description, link, feedLink string, folderId
 		title = feedLink
 	}
 	row := s.db.QueryRow(`
-		insert into feeds (title, description, link, feed_link, folder_id) 
+		insert into feeds (title, description, link, feed_link, folder_id)
 		values (?, ?, ?, ?, ?)
 		on conflict (feed_link) do update set folder_id = ?
         returning id`,
@@ -32,7 +33,7 @@ func (s *Storage) CreateFeed(title, description, link, feedLink string, folderId
 	var id int64
 	err := row.Scan(&id)
 	if err != nil {
-		log.Print(err)
+		log.Error().Err(err).Send()
 		return nil
 	}
 	return &Feed{
@@ -48,13 +49,13 @@ func (s *Storage) CreateFeed(title, description, link, feedLink string, folderId
 func (s *Storage) DeleteFeed(feedId int64) bool {
 	result, err := s.db.Exec(`delete from feeds where id = ?`, feedId)
 	if err != nil {
-		log.Print(err)
+		log.Error().Err(err).Send()
 		return false
 	}
 	nrows, err := result.RowsAffected()
 	if err != nil {
 		if err != sql.ErrNoRows {
-			log.Print(err)
+			log.Error().Err(err).Send()
 		}
 		return false
 	}
@@ -90,7 +91,7 @@ func (s *Storage) ListFeeds() []Feed {
 		order by title collate nocase
 	`)
 	if err != nil {
-		log.Print(err)
+		log.Error().Err(err).Send()
 		return result
 	}
 	for rows.Next() {
@@ -105,7 +106,7 @@ func (s *Storage) ListFeeds() []Feed {
 			&f.HasIcon,
 		)
 		if err != nil {
-			log.Print(err)
+			log.Error().Err(err).Send()
 			return result
 		}
 		result = append(result, f)
@@ -121,7 +122,7 @@ func (s *Storage) ListFeedsMissingIcons() []Feed {
 		where icon is null
 	`)
 	if err != nil {
-		log.Print(err)
+		log.Error().Err(err).Send()
 		return result
 	}
 	for rows.Next() {
@@ -135,7 +136,7 @@ func (s *Storage) ListFeedsMissingIcons() []Feed {
 			&f.FeedLink,
 		)
 		if err != nil {
-			log.Print(err)
+			log.Error().Err(err).Send()
 			return result
 		}
 		result = append(result, f)
@@ -156,7 +157,7 @@ func (s *Storage) GetFeed(id int64) *Feed {
 	)
 	if err != nil {
 		if err != sql.ErrNoRows {
-			log.Print(err)
+			log.Error().Err(err).Send()
 		}
 		return nil
 	}
@@ -165,7 +166,7 @@ func (s *Storage) GetFeed(id int64) *Feed {
 
 func (s *Storage) ResetFeedErrors() {
 	if _, err := s.db.Exec(`delete from feed_errors`); err != nil {
-		log.Print(err)
+		log.Error().Err(err).Send()
 	}
 }
 
@@ -177,7 +178,7 @@ func (s *Storage) SetFeedError(feedID int64, lastError error) {
 		feedID, lastError.Error(),
 	)
 	if err != nil {
-		log.Print(err)
+		log.Error().Err(err).Send()
 	}
 }
 
@@ -186,7 +187,7 @@ func (s *Storage) GetFeedErrors() map[int64]string {
 
 	rows, err := s.db.Query(`select feed_id, error from feed_errors`)
 	if err != nil {
-		log.Print(err)
+		log.Error().Err(err).Send()
 		return errors
 	}
 
@@ -194,7 +195,7 @@ func (s *Storage) GetFeedErrors() map[int64]string {
 		var id int64
 		var error string
 		if err = rows.Scan(&id, &error); err != nil {
-			log.Print(err)
+			log.Error().Err(err).Send()
 		}
 		errors[id] = error
 	}
@@ -209,6 +210,6 @@ func (s *Storage) SetFeedSize(feedId int64, size int) {
 		feedId, size,
 	)
 	if err != nil {
-		log.Print(err)
+		log.Error().Err(err).Send()
 	}
 }

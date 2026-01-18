@@ -8,7 +8,7 @@ package systray
 
 import (
 	"fmt"
-	"log"
+	"github.com/rs/zerolog/log"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -225,7 +225,7 @@ func systrayMenuItemSelected(id uint32) {
 	item, ok := menuItems[id]
 	menuItemsLock.RUnlock()
 	if !ok {
-		log.Printf("No menu item with ID %v", id)
+		log.Error().Msgf("No menu item with ID %v", id)
 		return
 	}
 	select {
